@@ -16,12 +16,41 @@ const int motor4Pin = 8; // Rear-right motor
 const int maxThrottle = 255; // Maximum throttle value (full speed)
 const int minThrottle = 0;   // Minimum throttle value (stopped)
 
+// Define PID parameters for each axis
+double kp_pitch = 1.0;
+double ki_pitch = 0.0;
+double kd_pitch = 0.0;
+
+// Define variables for PID control (error, integral, derivative)
+double error_pitch, prev_error_pitch = 0, integral_pitch = 0, derivative_pitch;
+
+// PID Controller function for pitch axis
+double pidControllerPitch(double setpoint, double actual_value) {
+    // Calculate error
+    error_pitch = setpoint - actual_value;
+
+    // Calculate integral
+    integral_pitch += error_pitch;
+
+    // Calculate derivative
+    derivative_pitch = error_pitch - prev_error_pitch;
+    prev_error_pitch = error_pitch;
+
+    // Calculate PID control signal
+    double pid_output = (kp_pitch * error_pitch) + (ki_pitch * integral_pitch) + (kd_pitch * derivative_pitch);
+
+    return pid_output;
+}
+
 void adjustMotorSpeeds(int throttle, int pitch, int yaw, int roll) {
-    // Adjust the speed of each motor based on the input values
-    int motor1Speed = throttle - pitch + yaw - roll;  // Front-left motor
-    int motor2Speed = throttle + pitch + yaw + roll;  // Front-right motor
-    int motor3Speed = throttle + pitch - yaw - roll;  // Rear-left motor
-    int motor4Speed = throttle - pitch - yaw + roll;  // Rear-right motor
+    // Calculate PID control signals for pitch axis
+    double pid_pitch = pidControllerPitch(0, pitch); // Setpoint for pitch is 0 (level)
+
+    // Adjust the speed of each motor based on the input values and PID control signals
+    int motor1Speed = throttle - pid_pitch + yaw - roll;  // Front-left motor
+    int motor2Speed = throttle + pid_pitch + yaw + roll;  // Front-right motor
+    int motor3Speed = throttle + pid_pitch - yaw - roll;  // Rear-left motor
+    int motor4Speed = throttle - pid_pitch - yaw + roll;  // Rear-right motor
 
     // Ensure motor speeds are within valid range
     motor1Speed = constrain(motor1Speed, minThrottle, maxThrottle);
@@ -35,6 +64,7 @@ void adjustMotorSpeeds(int throttle, int pitch, int yaw, int roll) {
     analogWrite(motor3Pin, motor3Speed);
     analogWrite(motor4Pin, motor4Speed);
 }
+
 void takeoff() {
     // Set throttle to a predefined value for takeoff
     int takeoffThrottle = 150; // Example value, adjust as needed
